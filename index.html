@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Kiwi Market NZ - Secondhand, NZ Health & Farm Fresh</title>
+<meta name="description" content="Buy and sell secondhand items, NZ health products, and farm fresh goods in Christchurch. Zero fees, local community.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2D6A4F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kiwi Market">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito Sans','Segoe UI',sans-serif;background:#f4f7f4;color:#1a2e1a;max-width:480px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:70px}
+.m-btn{border:none;cursor:pointer;border-radius:10px;font-family:inherit;transition:all .15s ease}
+.m-btn:active{transform:scale(.97)}
+.m-card{background:#fff;border-radius:14px;transition:all .2s;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.m-card:active{transform:scale(.98)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.modal-sheet{background:#fff;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;animation:sheetUp .3s ease}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideToast{from{opacity:0;transform:translate(-50%,20px)}to{opacity:1;transform:translate(-50%,0)}}
+.fade-in{animation:fadeIn .25s ease}
+input,textarea,select{font-family:inherit;font-size:15px;padding:12px 14px;border:1.5px solid #d4ddd4;border-radius:10px;background:#fff;color:#1a2e1a;outline:none;width:100%}
+input:focus,textarea:focus,select:focus{border-color:#2D6A4F}
+textarea{resize:vertical;min-height:80px}
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid #e8ede8;display:flex;z-index:50}
+.nav-btn{flex:1;padding:8px 0 10px;border:none;background:transparent;cursor:pointer;font-family:inherit;font-size:11px;color:#8a9a8a;display:flex;flex-direction:column;align-items:center;gap:2px;transition:color .2s}
+.nav-btn.active{color:#2D6A4F}
+.nav-icon{font-size:22px}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a2e1a;color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:slideToast .3s ease;z-index:200;white-space:nowrap}
+.empty{text-align:center;padding:40px;color:#8a9a8a}
+.emoji-btn{font-size:24px;padding:6px;border:2px solid transparent;border-radius:8px;background:#f0f5f0;cursor:pointer}
+.emoji-btn.sel{border-color:#2D6A4F;background:#e8f5e0}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script type="text/babel">
+const{useState,useEffect,useCallback}=React;
+const CATS=["All","NZ Health","Farm Fresh","Electronics","Clothing","Furniture","Books","Sports","Kitchen","Toys","Other"];
+const CAT_IC={"All":"🏠","NZ Health":"💊","Farm Fresh":"🌿","Electronics":"📱","Clothing":"👕","Furniture":"🪑","Books":"📚","Sports":"⚽","Kitchen":"🍳","Toys":"🧸","Other":"📦"};
+const SL={available:"Available",reserved:"Reserved",sold:"Sold"};
+const SC={available:"#2D6A4F",reserved:"#B8860B",sold:"#999"};
+const GR="#2D6A4F",GL="#40916C",GA="#95D5B2",GD="#1B4332",BG="#f4f7f4",WH="#fff",MU="#6B7B6B";
+
+const ITEMS=[
+  {id:"i1",title:"MacBook Air M2",price:850,category:"Electronics",description:"2023 model, excellent condition. 8GB RAM, 256GB SSD. Comes with charger.",location:"Riccarton",time:"2 hours ago",status:"available",seller:"Sage",image:"💻"},
+  {id:"i2",title:"Yoga Mat - Premium Cork",price:35,category:"Sports",description:"Natural cork yoga mat, non-slip. Used only a few times. 183cm x 66cm.",location:"Ilam",time:"3 hours ago",status:"available",seller:"Sage",image:"🧘"},
+  {id:"i3",title:"IKEA Bookshelf - Billy",price:40,category:"Furniture",description:"White Billy bookshelf, great condition. 80x28x202cm. Pick up only.",location:"Merivale",time:"5 hours ago",status:"available",seller:"Mike",image:"📖"},
+  {id:"i4",title:"Winter Jacket - Size M",price:25,category:"Clothing",description:"Warm puffer jacket, black, size M. Perfect for Christchurch winter!",location:"Addington",time:"6 hours ago",status:"reserved",seller:"Emma",image:"🧥"},
+  {id:"i5",title:"Python Programming Book",price:15,category:"Books",description:"Python Crash Course, 3rd Edition. Like new, no markings.",location:"Lincoln",time:"1 day ago",status:"available",seller:"Sage",image:"🐍"},
+  {id:"i6",title:"Rice Cooker - Zojirushi",price:60,category:"Kitchen",description:"5.5 cup rice cooker, works perfectly. Moving sale!",location:"Hornby",time:"1 day ago",status:"available",seller:"Yuki",image:"🍚"},
+  {id:"i7",title:"Nintendo Switch + Games",price:320,category:"Electronics",description:"Nintendo Switch with 3 games (Zelda, Mario Kart, Animal Crossing). All in great condition.",location:"Papanui",time:"1 day ago",status:"available",seller:"Tom",image:"🎮"},
+  {id:"i8",title:"Study Desk - White",price:30,category:"Furniture",description:"Simple white desk, perfect for students. 120x60cm. Some minor scratches.",location:"Ilam",time:"2 days ago",status:"sold",seller:"Lisa",image:"🪵"},
+  {id:"i9",title:"Lego Technic Set",price:45,category:"Toys",description:"Lego Technic Bugatti set, complete with box and instructions.",location:"Riccarton",time:"2 days ago",status:"available",seller:"Sage",image:"🧱"},
+  {id:"i10",title:"Camping Tent - 2 Person",price:55,category:"Sports",description:"Lightweight 2-person tent. Used twice. Waterproof.",location:"Burnside",time:"3 days ago",status:"available",seller:"Jack",image:"⛺"},
+  {id:"i11",title:"Korean Cookbook",price:10,category:"Books",description:"Maangchi's Big Book of Korean Cooking. Great recipes, beautiful photos.",location:"Lincoln",time:"3 days ago",status:"available",seller:"Sage",image:"📕"},
+  {id:"i12",title:"Blender - NutriBullet",price:30,category:"Kitchen",description:"NutriBullet 600W with 2 cups. Makes great smoothies!",location:"Sydenham",time:"4 days ago",status:"available",seller:"Anna",image:"🥤"},
+  {id:"i13",title:"Manuka Honey UMF 15+",price:45,category:"NZ Health",description:"Genuine NZ Manuka Honey UMF 15+, 500g. Sealed, brand new. Great for immune support.",location:"Lincoln",time:"1 day ago",status:"available",seller:"Sage",image:"🍯"},
+  {id:"i14",title:"Colostrum Powder 100g",price:35,category:"NZ Health",description:"NZ grass-fed bovine colostrum powder. Supports gut health and immunity. Factory sealed.",location:"Riccarton",time:"2 days ago",status:"available",seller:"Sage",image:"🥛"},
+  {id:"i15",title:"Propolis Capsules",price:28,category:"NZ Health",description:"NZ Bee Propolis 500mg, 120 capsules. Natural antioxidant. Unopened.",location:"Ilam",time:"1 day ago",status:"available",seller:"Yuki",image:"🐝"},
+  {id:"i16",title:"Deer Velvet Extract",price:55,category:"NZ Health",description:"Premium NZ deer velvet extract capsules. Supports joint health. 60 capsules.",location:"Lincoln",time:"3 days ago",status:"available",seller:"Sage",image:"🦌"},
+  {id:"i17",title:"Lanolin Cream - Pure NZ",price:18,category:"NZ Health",description:"100% pure lanolin cream. Deep moisturising for dry skin. Made in NZ. 200ml.",location:"Merivale",time:"2 days ago",status:"available",seller:"Emma",image:"🧴"},
+  {id:"i18",title:"Free-Range Eggs (dozen)",price:8,category:"Farm Fresh",description:"Farm fresh free-range eggs from happy Canterbury hens. Collected today!",location:"Lincoln",time:"Just now",status:"available",seller:"Sage",image:"🥚"},
+  {id:"i19",title:"Raw Wildflower Honey 1kg",price:22,category:"Farm Fresh",description:"Local Canterbury wildflower honey. Raw, unprocessed. Straight from the hive.",location:"Darfield",time:"1 day ago",status:"available",seller:"Jack",image:"🍯"},
+  {id:"i20",title:"Organic Avocados (bag of 5)",price:10,category:"Farm Fresh",description:"Fresh organic avocados from NZ farm. Perfectly ripe!",location:"Burnside",time:"2 days ago",status:"available",seller:"Anna",image:"🥑"},
+  {id:"i21",title:"NZ Merino Wool Scarf",price:40,category:"NZ Health",description:"Handmade NZ merino wool scarf. Soft, warm, natural. Perfect gift!",location:"Addington",time:"3 days ago",status:"available",seller:"Lisa",image:"🧣"},
+  {id:"i22",title:"Fresh Lamb - 1kg cuts",price:18,category:"Farm Fresh",description:"NZ grass-fed lamb, freshly cut. Canterbury farm direct. Pick up today.",location:"Lincoln",time:"Just now",status:"available",seller:"Mike",image:"🥩"},
+  {id:"i23",title:"Sheep Milk Soap Set",price:15,category:"Farm Fresh",description:"Handmade NZ sheep milk soap, set of 3. Lavender, manuka, and pure. No chemicals.",location:"Darfield",time:"2 days ago",status:"available",seller:"Sage",image:"🧼"},
+];
+
+const gid=()=>"i"+Date.now()+Math.random().toString(36).slice(2,5);
+const ld=(k,f)=>{try{const d=localStorage.getItem(k);return d?JSON.parse(d):f}catch{return f}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+const EMOJIS=["💻","📱","🎮","📖","🧥","👟","🪑","🍳","⚽","🧸","🍯","🥛","🐝","🦌","🧴","🥚","🥑","🥩","🧼","🧣","🎸","🚲","📦","🎒"];
+
+function App(){
+  const[items,setItems]=useState(()=>ld("kiwi-items",ITEMS));
+  const[view,setView]=useState("home");
+  const[cat,setCat]=useState("All");
+  const[search,setSearch]=useState("");
+  const[sel,setSel]=useState(null);
+  const[toast,setToast]=useState(null);
+  const[showPost,setShowPost]=useState(false);
+  const[chatItem,setChatItem]=useState(null);
+  const[msgs,setMsgs]=useState([]);
+  const[chatIn,setChatIn]=useState("");
+  const[ni,setNi]=useState({title:"",price:"",category:"Electronics",description:"",location:"Christchurch",image:""});
+
+  useEffect(()=>{sv("kiwi-items",items)},[items]);
+  const st=useCallback(m=>{setToast(m);setTimeout(()=>setToast(null),2500)},[]);
+
+  const filtered=items.filter(i=>{
+    const mc=cat==="All"||i.category===cat;
+    const ms=!search||i.title.toLowerCase().includes(search.toLowerCase())||i.description.toLowerCase().includes(search.toLowerCase());
+    return mc&&ms;
+  });
+
+  const myItems=items.filter(i=>i.seller==="Sage");
+
+  const post=()=>{
+    if(!ni.title.trim()||!ni.price)return st("Title and price required / 제목과 가격을 입력하세요");
+    setItems(p=>[{...ni,id:gid(),title:ni.title.trim(),price:Number(ni.price),description:ni.description.trim(),location:ni.location.trim()||"Christchurch",image:ni.image||"📦",seller:"Sage",time:"Just now",status:"available"},...p]);
+    setShowPost(false);setNi({title:"",price:"",category:"Electronics",description:"",location:"Christchurch",image:""});
+    st("Posted! / 등록 완료! 🥝");
+  };
+
+  const updStatus=(id,s)=>{setItems(p=>p.map(i=>i.id===id?{...i,status:s}:i));setSel(p=>p?{...p,status:s}:null);st("Status: "+SL[s])};
+  const del=(id)=>{setItems(p=>p.filter(i=>i.id!==id));setSel(null);setView("mypage");st("Deleted / 삭제됨")};
+
+  const sendChat=()=>{
+    if(!chatIn.trim())return;
+    setMsgs(p=>[...p,{from:"me",text:chatIn.trim()}]);
+    const c=chatIn.toLowerCase();
+    const r=c.includes("price")||c.includes("가격")?"The price is $"+chatItem.price+". Interested? 😊":c.includes("available")||c.includes("있")?"Yes, still available! When can you pick up?":"Thanks for your message! I'll reply soon 👍";
+    setTimeout(()=>setMsgs(p=>[...p,{from:"seller",text:r}]),800);
+    setChatIn("");
+  };
+
+  return(
+<div>
+{/* === HOME === */}
+{view==="home"&&!sel&&!chatItem&&(
+<div className="fade-in">
+<div style={{background:`linear-gradient(135deg, ${GD} 0%, ${GR} 100%)`,padding:"20px 18px 16px",color:"#fff"}}>
+  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+    <div>
+      <h1 style={{fontSize:22,fontWeight:800}}>🥝 Kiwi Market</h1>
+      <p style={{fontSize:12,opacity:.85,fontWeight:300}}>Secondhand · NZ Health · Farm Fresh</p>
+    </div>
+    <div style={{background:"rgba(255,255,255,0.15)",borderRadius:10,padding:"6px 12px",fontSize:13,fontWeight:600}}>
+      {items.filter(i=>i.status==="available").length} items
+    </div>
+  </div>
+  <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Search items..."
+    style={{borderRadius:12,border:"none",padding:"12px 16px",fontSize:15,background:"rgba(255,255,255,0.95)",color:"#1a2e1a"}}/>
+</div>
+
+<div style={{padding:"14px 18px 6px",overflowX:"auto",display:"flex",gap:10,whiteSpace:"nowrap"}}>
+  {CATS.map(c=>(
+    <button key={c} onClick={()=>setCat(c)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"8px 14px",borderRadius:12,border:"none",cursor:"pointer",
+      background:cat===c?"#e8f5e0":WH,color:cat===c?GR:"#666",fontSize:11,fontWeight:600,fontFamily:"inherit",
+      boxShadow:cat===c?`0 0 0 1.5px ${GR}`:"0 1px 3px rgba(0,0,0,.06)",minWidth:60,transition:"all .2s"}}>
+      <span style={{fontSize:22}}>{CAT_IC[c]}</span>{c}
+    </button>
+  ))}
+</div>
+
+<div style={{padding:"10px 18px"}}>
+  {filtered.length===0?(
+    <div className="empty"><div style={{fontSize:40,marginBottom:8}}>🔍</div><p>No items found / 검색 결과가 없어요</p></div>
+  ):filtered.map(item=>(
+    <div key={item.id} className="m-card" onClick={()=>setSel(item)}
+      style={{marginBottom:12,display:"flex",overflow:"hidden",opacity:item.status==="sold"?.6:1}}>
+      <div style={{width:110,minHeight:110,background:"#f0f5f0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:44,flexShrink:0,position:"relative"}}>
+        {item.image}
+        {item.status!=="available"&&(
+          <div style={{position:"absolute",top:6,left:6,background:SC[item.status],color:"#fff",fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:6}}>{SL[item.status]}</div>
+        )}
+      </div>
+      <div style={{padding:"12px 14px",flex:1,display:"flex",flexDirection:"column",justifyContent:"center"}}>
+        <h3 style={{fontSize:15,fontWeight:700,marginBottom:4,lineHeight:1.3}}>{item.title}</h3>
+        <p style={{fontSize:12,color:MU,marginBottom:6}}>{item.location} · {item.time}</p>
+        <p style={{fontSize:17,fontWeight:800,color:GR}}>${item.price}</p>
+      </div>
+    </div>
+  ))}
+</div>
+</div>
+)}
+
+{/* === DETAIL === */}
+{sel&&!chatItem&&(
+<div className="fade-in" style={{background:WH,minHeight:"100vh"}}>
+  <div style={{background:"#f0f5f0",height:220,display:"flex",alignItems:"center",justifyContent:"center",fontSize:80,position:"relative"}}>
+    {sel.image}
+    <button className="m-btn" onClick={()=>setSel(null)} style={{position:"absolute",top:12,left:12,background:"rgba(0,0,0,.4)",color:"#fff",padding:"8px 14px",fontSize:14,fontWeight:700}}>← Back</button>
+    {sel.status!=="available"&&(
+      <div style={{position:"absolute",top:12,right:12,background:SC[sel.status],color:"#fff",padding:"6px 14px",borderRadius:8,fontWeight:700,fontSize:13}}>{SL[sel.status]}</div>
+    )}
+  </div>
+  <div style={{padding:"20px 18px"}}>
+    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+      <div style={{width:40,height:40,borderRadius:20,background:GR,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:16}}>{sel.seller[0]}</div>
+      <div><div style={{fontWeight:700,fontSize:14}}>{sel.seller}</div><div style={{fontSize:12,color:MU}}>{sel.location}</div></div>
+    </div>
+    <h2 style={{fontSize:20,fontWeight:800,marginBottom:8}}>{sel.title}</h2>
+    <p style={{fontSize:12,color:MU,marginBottom:12}}>{sel.category} · {sel.time}</p>
+    <p style={{fontSize:15,lineHeight:1.6,color:"#444",marginBottom:20}}>{sel.description}</p>
+    <div style={{fontSize:24,fontWeight:800,color:GR,marginBottom:20}}>${sel.price}</div>
+    {sel.seller==="Sage"?(
+      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+        {sel.status!=="reserved"&&<button className="m-btn" onClick={()=>updStatus(sel.id,"reserved")} style={{padding:"12px 20px",background:"#fff8e0",color:"#B8860B",fontSize:14,fontWeight:700}}>Reserve / 예약</button>}
+        {sel.status!=="sold"&&<button className="m-btn" onClick={()=>updStatus(sel.id,"sold")} style={{padding:"12px 20px",background:"#eee",color:"#666",fontSize:14,fontWeight:700}}>Sold / 판매완료</button>}
+        {sel.status!=="available"&&<button className="m-btn" onClick={()=>updStatus(sel.id,"available")} style={{padding:"12px 20px",background:"#e8f5e0",color:GR,fontSize:14,fontWeight:700}}>Available / 판매중</button>}
+        <button className="m-btn" onClick={()=>del(sel.id)} style={{padding:"12px 20px",background:"#fde8e8",color:"#c44",fontSize:14,fontWeight:700}}>Delete / 삭제</button>
+      </div>
+    ):(
+      <button className="m-btn" onClick={()=>{setChatItem(sel);setMsgs([{from:"system",text:"Chat about: "+sel.title}])}}
+        style={{width:"100%",padding:"14px 0",background:GR,color:"#fff",fontSize:16,fontWeight:700,borderRadius:12}}>
+        💬 Chat with Seller / 채팅하기
+      </button>
+    )}
+  </div>
+</div>
+)}
+
+{/* === CHAT === */}
+{chatItem&&(
+<div className="fade-in" style={{background:BG,minHeight:"100vh",display:"flex",flexDirection:"column"}}>
+  <div style={{background:WH,padding:"14px 18px",display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid #e8ede8"}}>
+    <button className="m-btn" onClick={()=>{setChatItem(null);setMsgs([])}} style={{background:"none",padding:"4px 8px",fontSize:18,color:"#222"}}>←</button>
+    <div style={{width:36,height:36,borderRadius:18,background:GR,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14}}>{chatItem.seller[0]}</div>
+    <div><div style={{fontWeight:700,fontSize:14}}>{chatItem.seller}</div><div style={{fontSize:11,color:MU}}>{chatItem.title} · ${chatItem.price}</div></div>
+  </div>
+  <div style={{flex:1,padding:"16px 18px",overflowY:"auto",display:"flex",flexDirection:"column",gap:10}}>
+    {msgs.map((m,i)=>(
+      <div key={i} style={{alignSelf:m.from==="me"?"flex-end":m.from==="system"?"center":"flex-start"}}>
+        <div style={{background:m.from==="me"?GR:m.from==="system"?"#dde5dd":WH,color:m.from==="me"?"#fff":"#222",
+          padding:m.from==="system"?"6px 14px":"10px 16px",borderRadius:16,fontSize:m.from==="system"?12:14,maxWidth:280,
+          boxShadow:m.from==="system"?"none":"0 1px 3px rgba(0,0,0,.06)"}}>{m.text}</div>
+      </div>
+    ))}
+  </div>
+  <div style={{padding:"12px 18px 20px",background:WH,borderTop:"1px solid #e8ede8",display:"flex",gap:8}}>
+    <input value={chatIn} onChange={e=>setChatIn(e.target.value)} onKeyDown={e=>e.key==="Enter"&&sendChat()}
+      placeholder="Type a message... / 메시지 입력" style={{flex:1,borderRadius:20,padding:"10px 16px"}}/>
+    <button className="m-btn" onClick={sendChat} style={{background:GR,color:"#fff",padding:"10px 18px",fontWeight:700,fontSize:14}}>Send</button>
+  </div>
+</div>
+)}
+
+{/* === MY PAGE === */}
+{view==="mypage"&&!sel&&!chatItem&&(
+<div className="fade-in">
+  <div style={{background:`linear-gradient(135deg, ${GD} 0%, ${GR} 100%)`,padding:"24px 18px",color:"#fff"}}>
+    <div style={{display:"flex",alignItems:"center",gap:14}}>
+      <div style={{width:56,height:56,borderRadius:28,background:"rgba(255,255,255,.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,fontWeight:800}}>S</div>
+      <div><h2 style={{fontSize:20,fontWeight:800}}>Sage</h2><p style={{fontSize:13,opacity:.85}}>Christchurch · {myItems.length} items listed</p></div>
+    </div>
+  </div>
+  <div style={{padding:"16px 18px"}}>
+    <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>My Listings / 내 상품</h3>
+    {myItems.length===0?(
+      <div className="empty"><p>No listings yet / 등록한 상품이 없어요</p></div>
+    ):myItems.map(item=>(
+      <div key={item.id} className="m-card" onClick={()=>setSel(item)}
+        style={{marginBottom:10,display:"flex",overflow:"hidden",opacity:item.status==="sold"?.6:1}}>
+        <div style={{width:80,minHeight:80,background:"#f0f5f0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,position:"relative"}}>
+          {item.image}
+          <div style={{position:"absolute",bottom:4,right:4,background:SC[item.status],color:"#fff",fontSize:9,padding:"1px 6px",borderRadius:4,fontWeight:700}}>{SL[item.status]}</div>
+        </div>
+        <div style={{padding:"10px 14px",flex:1}}>
+          <h4 style={{fontSize:14,fontWeight:700,marginBottom:2}}>{item.title}</h4>
+          <p style={{fontSize:16,fontWeight:800,color:GR}}>${item.price}</p>
+        </div>
+      </div>
+    ))}
+
+    <div style={{marginTop:24,padding:16,background:"#faf5f0",borderRadius:12,border:"1px solid #e8e0d6"}}>
+      <h4 style={{fontSize:13,fontWeight:600,color:"#9a4a4a",marginBottom:6}}>Reset Data / 데이터 초기화</h4>
+      <button className="m-btn" onClick={()=>{setItems(ITEMS);st("Reset! / 초기화됨")}} style={{padding:"8px 16px",background:"#d9a0a0",color:"#fff",fontSize:12,fontWeight:600}}>Reset All</button>
+    </div>
+  </div>
+</div>
+)}
+
+{/* === POST MODAL === */}
+{showPost&&(
+<div className="modal-bg" onClick={()=>setShowPost(false)}>
+  <div className="modal-sheet" onClick={e=>e.stopPropagation()}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+      <h3 style={{fontSize:20,fontWeight:800}}>🥝 Sell Item / 상품 등록</h3>
+      <button className="m-btn" onClick={()=>setShowPost(false)} style={{background:"#eee",padding:"6px 12px",fontSize:16}}>✕</button>
+    </div>
+    <div>
+      <div style={{marginBottom:14}}>
+        <label style={{fontSize:13,fontWeight:700,color:"#666",marginBottom:4,display:"block"}}>Emoji Icon</label>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {EMOJIS.map(e=>(<button key={e} className={"emoji-btn"+(ni.image===e?" sel":"")} onClick={()=>setNi({...ni,image:e})}>{e}</button>))}
+        </div>
+      </div>
+      <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:700,color:"#666",marginBottom:4,display:"block"}}>Title / 제목 *</label>
+        <input value={ni.title} onChange={e=>setNi({...ni,title:e.target.value})} placeholder="What are you selling?"/></div>
+      <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:700,color:"#666",marginBottom:4,display:"block"}}>Price ($) / 가격 *</label>
+        <input type="number" value={ni.price} onChange={e=>setNi({...ni,price:e.target.value})} placeholder="0"/></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+        <div><label style={{fontSize:13,fontWeight:700,color:"#666",marginBottom:4,display:"block"}}>Category</label>
+          <select value={ni.category} onChange={e=>setNi({...ni,category:e.target.value})}>{CATS.filter(c=>c!=="All").map(c=><option key={c}>{c}</option>)}</select></div>
+        <div><label style={{fontSize:13,fontWeight:700,color:"#666",marginBottom:4,display:"block"}}>Location / 위치</label>
+          <input value={ni.location} onChange={e=>setNi({...ni,location:e.target.value})} placeholder="Christchurch"/></div>
+      </div>
+      <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:700,color:"#666",marginBottom:4,display:"block"}}>Description / 설명</label>
+        <textarea value={ni.description} onChange={e=>setNi({...ni,description:e.target.value})} placeholder="Describe your item..."/></div>
+    </div>
+    <button className="m-btn" onClick={post} style={{width:"100%",padding:"14px 0",background:GR,color:"#fff",fontSize:16,fontWeight:700,marginTop:4,borderRadius:12}}>Post Item / 등록하기 🥝</button>
+  </div>
+</div>
+)}
+
+{/* TOAST */}
+{toast&&<div className="toast">{toast}</div>}
+
+{/* NAV */}
+{!chatItem&&(
+<div className="bottom-nav">
+  <button className={"nav-btn"+(view==="home"&&!sel?" active":"")} onClick={()=>{setView("home");setSel(null)}}><span className="nav-icon">🏠</span>Home</button>
+  <button className={"nav-btn"+(showPost?" active":"")} onClick={()=>{setShowPost(true);setSel(null)}}><span className="nav-icon" style={{fontSize:28,marginTop:-4}}>⊕</span>Sell</button>
+  <button className={"nav-btn"+(view==="mypage"&&!sel?" active":"")} onClick={()=>{setView("mypage");setSel(null)}}><span className="nav-icon">👤</span>My Page</button>
+</div>
+)}
+</div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("app")).render(<App/>);
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').then(()=>console.log('SW ok')).catch(e=>console.log('SW fail',e))})}
+</script>
+</body>
+</html>
